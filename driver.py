@@ -13,6 +13,11 @@ from imagernn.data_provider import getDataProvider
 from imagernn.solver import Solver
 from imagernn.imagernn_utils import decodeGenerator, eval_split
 
+import uuid
+import redis
+rdb = redis.StrictRedis(host='localhost', port=6379, db=1)
+
+
 def preProBuildWordVocab(sentence_iterator, word_count_threshold):
   # count up all word counts so that we can threshold
   # this shouldnt be too expensive of an operation
@@ -121,6 +126,10 @@ def main(params):
   do_grad_check = params['do_grad_check']
   max_epochs = params['max_epochs']
   host = socket.gethostname() # get computer hostname
+  
+  # Assign worker ID
+  worker = str(uuid.uuid4())
+  rdb.lpush('training_workers', worker)
 
   # fetch the data provider
   dp = getDataProvider(dataset)
@@ -203,7 +212,7 @@ def main(params):
     if it == 0:
       total_cost0 = total_cost # store this initial cost
     if total_cost > total_cost0 * 2:
-      print 'Aboring, cost seems to be exploding. Run gradcheck? Lower the learning rate?'
+      print 'Aborting, cost seems to be exploding. Run gradcheck? Lower the learning rate?'
       abort = True # set the abort flag, we'll break out
 
     # logging: write JSON files for visual inspection of the training
@@ -219,12 +228,15 @@ def main(params):
       jstatus['val_ppl2'] = val_ppl2 # just write the last available one
       jstatus['train_ppl2'] = train_ppl2
       json_worker_status['history'].append(jstatus)
+      rdb.set('%s_status' % worker, json.dumps(json_worker_status))
+      """
       status_file = os.path.join(params['worker_status_output_directory'], host + '_status.json')
       try:
         json.dump(json_worker_status, open(status_file, 'w'))
       except Exception, e: # todo be more clever here
         print 'tried to write worker status into %s but got error:' % (status_file, )
         print e
+      """
 
     # perform perplexity evaluation on the validation set and save a model checkpoint if it's good
     is_last_iter = (it+1) == max_iters

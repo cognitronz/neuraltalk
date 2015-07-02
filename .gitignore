@@ -1,2 +1,8 @@
 *.pyc
 cv/*.p
+venv/
+*~
+*.rdb
+*.log
+data/
+cv/
