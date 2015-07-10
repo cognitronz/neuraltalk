@@ -1,0 +1,112 @@
+<html>
+<head>
+
+<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+
+<style>
+    body {
+        margin: 30px;
+    }
+</style>
+<title>Neuraltalk</title>
+</head>
+<body style="width: 50%;">
+<h1>Neuraltalk</h1>
+<h4>Training Datasets</h4>
+{% if not task_id %}
+    <p>Start by downloading the datasets. Wait for the downloads to finish then click on appropriate actions from the menu below.</p>
+{% endif %}
+<ul style="list-style: none;">
+    <li>
+        {% if datasets %}
+            <br>
+            Downloaded datasets:
+            <ul>
+            {% for ds in datasets %}
+                <li>{{ ds }}</li>
+            {% endfor %}
+            </ul>
+            <br>
+            Download more:
+            <br>
+        {% endif %}
+        <form action="/download/">
+            <select name="dataset" id="download">
+                {% for ds in for_download %}
+                <option value="{{ ds }}">{{ ds }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Download</button>
+        </form>
+    </li>
+    <div>
+</ul>
+
+{% if task_id %}
+    
+    <p>Download of {{ dataset }} dataset is in progress...</p>
+    <div id="pct" style="font-size: 30px;">0%</div>
+    <script>
+        $('form').hide();
+        (function poll() {
+            setInterval(function(){
+                $.get("/download_status/?id={{ task_id }}", function(d){
+                    $("#pct").html(d + '%');
+                    if (d == "100") {
+                        clearInterval();
+                        window.location = "/";
+                    }
+                })
+            }, 3000);
+        })();
+    </script>
+{% endif %}
+
+
+{% if not task_id %}
+    <h4>Actions Menu</h4>
+    <ul>
+        <li>
+            <a href="/train/">
+            Execute Training
+            </a>
+            <small> // Execute the training of downloaded datasets</small>
+        </li>
+        <li>
+            <a href="/monitor/">
+            Status Monitoring
+            </a>
+            <small> // Monitor the progress of current training runs</small>
+        </li>
+        <li>
+            <a href="", id="clear">
+            Stop and Clear
+            </a>
+            <small> // Stop the training and clear all generated files</small>
+            <script>
+                $("#clear").click(function(){
+                    var c = confirm("Are you sure about this?");
+                    if (c == true) {
+                        console.log('Redirecting...');
+                        window.location = "/stop_and_clear/";
+                    }
+                });
+            </script>
+        </li>
+        <li>
+            <a href="/results/">
+            View Results
+            </a>
+            <small> // View the results</small>
+        </li>
+        <li>
+            <a href="/logout/">
+            Logout
+            </a>
+            <small> // Logout</small>
+        </li>
+    </ul>
+{% endif %}
+</body>
+</html>

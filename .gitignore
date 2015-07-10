@@ -6,3 +6,5 @@ venv/
 *.log
 data/
 cv/
+*.jpg
+web/static/*
