@@ -2,16 +2,20 @@ from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import logout
+from tasks import download, execute_training
 from django.conf import settings
+from celery.task.control import revoke
+from signal import SIGUSR1
 from tasks import download
 from models import Task
+import json
 import uuid
+import glob
 import os
 
 
 @login_required
 def home_page(request):
-    dsk = 'downloaded_datasets'
     dls = Task.objects.filter(task_type='download_dataset', status='SUCCESS')
     ds = []
     if dls:
@@ -19,9 +23,9 @@ def home_page(request):
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     nds = set(ds_list) - set(ds)
     context = {
-        'datasets': ds,
-        'for_download': list(nds)[::-1]
-    }
+            'datasets': ds,
+            'for_download': list(nds)[::-1]
+        }
     return render_to_response('main/home.html', context)
     
 
@@ -76,31 +80,31 @@ def serve_image(request, dataset, img_id):
    
 def results(request):
     return render_to_response('main/visualize_result_struct.html')
-    
-    
-#@app.route("/workers/")
-#@requires_auth
+
+
 def workers_info(request):
     action = request.GET.get('action')
     if action == 'list':
-        tk = 'training_workers'
-        workers = rdb.lrange(tk, 0, rdb.llen(tk))
-        return json.dumps(workers)
+        ss = ['RUNNING', 'PENDING', 'FAILURE']
+        ts = Task.objects.filter(task_type='train_dataset', status__in=ss)
+        ts_list = [x.task_id for x in ts]
+        return HttpResponse(json.dumps(ts_list), content_type='application/json')
     elif action == 'status':
         wid = request.GET.get('id')
-        status = rdb.get('%s_status' % wid)
-        return json.dumps(status)
-        
-        
-#@app.route("/clear/")
-#@requires_auth
+        status_dir = os.path.join(settings.PROJECT_DIR, 'status')
+        status_file = os.path.join(status_dir, '%s_status.json' % wid)
+        return HttpResponse(open(status_file,'r'), content_type='application/json')
+
+
 def stop_and_clear(request):
-    # TODO -- revoke and terminate training tasks
-    # Clear the status and checkpoint files
-    # Clear the status messages in Redis DB
-    rk = 'training_tasks'
-    for task_id in rdb.lrange(rk, 0, rdb.llen(rk)):
-        revoke(task_id, terminate=True)
-    rdb.delete('training_tasks')
-    rdb.delete('training_status')
+    ts = Task.objects.filter(task_type='train_dataset')
+    for t in ts:
+        if t.status == 'RUNNING':
+            revoke(t.task_id, terminate=True, signal=SIGUSR1)
+        t.delete()
+    status_files = glob.glob(os.path.join(settings.PROJECT_DIR, 'status', '*.json'))
+    checkpoint_files = glob.glob(os.path.join(settings.PROJECT_DIR, 'cv', '*.p'))
+    xfiles = status_files + checkpoint_files
+    for f in xfiles:
+        os.remove(f)
     return HttpResponseRedirect('/')

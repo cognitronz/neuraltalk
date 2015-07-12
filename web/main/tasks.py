@@ -42,9 +42,11 @@ def download(ds, job):
 
 @task(name='tasks.train_dataset')
 def train_dataset(ds, job):
+    job.status = 'RUNNING'
+    job.save()
     os.chdir(settings.PROJECT_DIR)
-    cmd = ['python', os.path.join(PROJECT_DIR, 'driver.py')]
-    cmd += ['--dataset=%s' % ds]
+    cmd = ['python', os.path.join(settings.PROJECT_DIR, 'driver.py')]
+    cmd += ['--dataset=%s' % ds, '--worker_id=%s' % job.task_id]
     task_id = train_dataset.request.id
     subprocess.call(cmd)
     # Update the task records
@@ -65,7 +67,7 @@ def execute_training():
         jid = str(uuid.uuid1())
         job = Task(task_id=jid, task_type='train_dataset', data_input=ds)
         job.save()
-        train_dataset.delay(ds)
+        train_dataset.delay(ds, job)
     
     
 @task(name='tasks.test_func')

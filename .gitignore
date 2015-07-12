@@ -8,3 +8,5 @@ data/
 cv/
 *.jpg
 web/static/*
+*.pid
+result_struct.json

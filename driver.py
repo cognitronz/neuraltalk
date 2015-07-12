@@ -13,10 +13,6 @@ from imagernn.data_provider import getDataProvider
 from imagernn.solver import Solver
 from imagernn.imagernn_utils import decodeGenerator, eval_split
 
-import uuid
-import redis
-rdb = redis.StrictRedis(host='localhost', port=6379, db=1)
-
 
 def preProBuildWordVocab(sentence_iterator, word_count_threshold):
   # count up all word counts so that we can threshold
@@ -125,11 +121,8 @@ def main(params):
   word_count_threshold = params['word_count_threshold']
   do_grad_check = params['do_grad_check']
   max_epochs = params['max_epochs']
+  worker = params['worker_id']
   host = socket.gethostname() # get computer hostname
-  
-  # Assign worker ID
-  worker = str(uuid.uuid4())
-  rdb.lpush('training_workers', worker)
 
   # fetch the data provider
   dp = getDataProvider(dataset)
@@ -228,15 +221,13 @@ def main(params):
       jstatus['val_ppl2'] = val_ppl2 # just write the last available one
       jstatus['train_ppl2'] = train_ppl2
       json_worker_status['history'].append(jstatus)
-      rdb.set('%s_status' % worker, json.dumps(json_worker_status))
-      """
-      status_file = os.path.join(params['worker_status_output_directory'], host + '_status.json')
+      # Write the status file
+      status_file = os.path.join(params['worker_status_output_directory'], worker + '_status.json')
       try:
         json.dump(json_worker_status, open(status_file, 'w'))
       except Exception, e: # todo be more clever here
         print 'tried to write worker status into %s but got error:' % (status_file, )
         print e
-      """
 
     # perform perplexity evaluation on the validation set and save a model checkpoint if it's good
     is_last_iter = (it+1) == max_iters
@@ -319,6 +310,8 @@ if __name__ == "__main__":
   parser.add_argument('--eval_batch_size', dest='eval_batch_size', type=int, default=100, help='for faster validation performance evaluation, what batch size to use on val img/sentences?')
   parser.add_argument('--eval_max_images', dest='eval_max_images', type=int, default=-1, help='for efficiency we can use a smaller number of images to get validation error')
   parser.add_argument('--min_ppl_or_abort', dest='min_ppl_or_abort', type=float , default=-1, help='if validation perplexity is below this threshold the job will abort')
+
+  parser.add_argument('--worker_id', dest='worker_id', type=str, help='UUID of the worker process')
 
   args = parser.parse_args()
   params = vars(args) # convert to ordinary dict
