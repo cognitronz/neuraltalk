@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<title>Neuraltalk Monitor</title>
 <style>
 body {
   font-family: courier;
@@ -151,10 +152,12 @@ function updateall() {
     }
   }
 }
+
 function allparams() {
   filter_params = false;
   updateall();
 }
+
 function filterparams() {
   filter_params = true;
   updateall();
@@ -164,10 +167,12 @@ function filterparams() {
 </head>
 
 <body onload="start()">
+  <!--
   <div id="ui" style="margin:20px;">
     <button type="button" onclick="allparams()">Show all params</button>
     <button type="button" onclick="filterparams()">Filter params</button>
   </div>
+  -->
   <div id="wrap" style="margin: 20px;">
   </div>
 </body>
