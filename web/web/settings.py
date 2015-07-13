@@ -108,3 +108,10 @@ LOGIN_URL = '/admin/login'
 
 BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# Neuraltalk setttings
+LEARNING_RATE = {
+    'flick8k': 1e-3,
+    'flickr30k': 1e-3,
+    'coco': 1e-4
+}

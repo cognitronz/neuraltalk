@@ -47,6 +47,7 @@ def train_dataset(ds, job):
     os.chdir(settings.PROJECT_DIR)
     cmd = ['python', os.path.join(settings.PROJECT_DIR, 'driver.py')]
     cmd += ['--dataset=%s' % ds, '--worker_id=%s' % job.task_id]
+    cmd += ['--learning_rate=%s' % settings.LEARNING_RATE[ds]]
     task_id = train_dataset.request.id
     subprocess.call(cmd)
     # Update the task records
