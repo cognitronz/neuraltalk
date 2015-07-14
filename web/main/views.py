@@ -84,11 +84,9 @@ def monitor(request):
 
 def get_results(request):
     task_id = request.GET.get('task_id')
-    task = Task.objects.get(task_id=task_id)
+    task = Task.objects.get(task_id=task_id, status='SUCCESS')
     results_dir = os.path.join(settings.PROJECT_DIR, 'results')
     results_file = os.path.join(results_dir, task.data_output)
-    #return HttpResponse(open(results_file,'r'), content_type='application/json')
-    #res_file = os.path.join(settings.PROJECT_DIR, 'result_struct.json')
     return HttpResponse(open(results_file, 'r'), content_type = 'application/json; charset=utf8')
     
 
