@@ -112,6 +112,12 @@ def results(request):
     return render_to_response('main/results.html', context)
 
 
+def results_status(request):
+    task_id = request.GET.get('task_id')
+    task = Task.objects.get(task_id=task_id)
+    return HttpResponse(task.status)
+
+
 def predict(request):
     context = {}
     return render_to_response('main/predict.html', context)

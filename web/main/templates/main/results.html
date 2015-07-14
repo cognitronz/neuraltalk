@@ -181,7 +181,8 @@
         <script>
             (function poll() {
                 setInterval(function(){
-                    $.get("/results_status/?id={{ task_id }}", function(d){
+                    $.get("/results_status/?task_id={{ task_id }}", function(d){
+                        console.log(d);
                         if (d == "SUCCESS") {
                             clearInterval();
                             $("#status").hide();

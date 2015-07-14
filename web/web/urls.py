@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^monitor/$', 'main.views.monitor'),
     url(r'^results/$', 'main.views.results'),
     url(r'^get_results/$', 'main.views.get_results'),
+    url(r'^results_status/$', 'main.views.results_status'),
     url(r'^results/data/(?P<dataset>.*)/imgs/(?P<img_id>.*)\.jpg$', 'main.views.serve_image'),
     url(r'^workers/$', 'main.views.workers_info'),
     url(r'^stop_and_clear/$', 'main.views.stop_and_clear'),
