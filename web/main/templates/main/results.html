@@ -168,30 +168,38 @@
     
     <h1>Training Results</h1>
     
-    {% if task_id %}    
+    {% if task_id %}  
+    
+        {% if action == 'wait' %}  
 
-        <h3 id="status">Wait while results are being generated...</h3>
+            <h3 id="status">Wait while results are being generated...</h3>
 
-        <div id="wrap">
-          <div id="wrap">
-            <div id="blobs"></div>  
-          </div>
-        </div>
-
-        <script>
-            (function poll() {
-                setInterval(function(){
-                    $.get("/results_status/?task_id={{ task_id }}", function(d){
-                        console.log(d);
-                        if (d == "SUCCESS") {
-                            clearInterval();
-                            $("#status").hide();
-                            start();
-                        }
-                    })
-                }, 3000);
-            })();
-        </script>
+            <script>
+                (function poll() {
+                    setInterval(function(){
+                        $.get("/results_status/?task_id={{ task_id }}", function(d){
+                            if (d == "SUCCESS") {
+                                $("#status").hide();
+                                window.location = '/results/?action=view&id={{ task_id }}';
+                            }
+                        })
+                    }, 3000);
+                })();
+            </script>
+            
+        {% else %}
+        
+            <div id="wrap">
+              <div id="wrap">
+                <div id="blobs"></div>  
+              </div>
+            </div>
+            
+            <script>
+                start();
+            </script>
+        
+        {% endif %}
     
     {% else %}
     

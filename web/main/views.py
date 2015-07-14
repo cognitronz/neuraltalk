@@ -99,11 +99,12 @@ def results(request):
         checkpoint_file = request.POST.get('checkpoint')
         task_id = str(uuid.uuid4())
         generate_results.apply_async(args=(checkpoint_file,), task_id=task_id)
-        return HttpResponseRedirect('/results/?id=%s' % task_id)
+        return HttpResponseRedirect('/results/?action=wait&id=%s' % task_id)
     elif request.method == 'GET':
         task_id = request.GET.get('id')
+        action = request.GET.get('action')
         if task_id:
-            context = {'task_id': task_id}
+            context = {'task_id': task_id, 'action': action}
         else:
             checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
             chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
