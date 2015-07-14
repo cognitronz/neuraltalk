@@ -83,8 +83,13 @@ def monitor(request):
    
 
 def get_results(request):
-    res_file = os.path.join(settings.PROJECT_DIR, 'result_struct.json')
-    return HttpResponse(open(res_file, 'r'), content_type = 'application/json; charset=utf8')
+    task_id = request.GET.get('task_id')
+    task = Task.objects.get(task_id=task_id)
+    results_dir = os.path.join(settings.PROJECT_DIR, 'results')
+    results_file = os.path.join(results_dir, task.data_output)
+    #return HttpResponse(open(results_file,'r'), content_type='application/json')
+    #res_file = os.path.join(settings.PROJECT_DIR, 'result_struct.json')
+    return HttpResponse(open(results_file, 'r'), content_type = 'application/json; charset=utf8')
     
 
 def serve_image(request, dataset, img_id):
@@ -97,9 +102,13 @@ def results(request):
     context = {}
     if request.method == 'POST':
         checkpoint_file = request.POST.get('checkpoint')
-        task_id = str(uuid.uuid4())
-        generate_results.apply_async(args=(checkpoint_file,), task_id=task_id)
-        return HttpResponseRedirect('/results/?action=wait&id=%s' % task_id)
+        task = Task.objects.filter(task_type='generate_results', data_input=checkpoint_file)
+        if task:
+            return HttpResponseRedirect('/results/?action=view&id=%s' % task[0].task_id)
+        else:
+            task_id = str(uuid.uuid4())
+            generate_results.apply_async(args=(checkpoint_file,), task_id=task_id)
+            return HttpResponseRedirect('/results/?action=wait&id=%s' % task_id)
     elif request.method == 'GET':
         task_id = request.GET.get('id')
         action = request.GET.get('action')

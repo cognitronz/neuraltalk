@@ -87,8 +87,12 @@ def generate_results(checkpoint_file):
     checkpoint_path = os.path.join(settings.PROJECT_DIR, 'cv', checkpoint_file)
     cmd = ['python', os.path.join(settings.PROJECT_DIR, 'eval_sentence_predictions.py')]
     cmd += [checkpoint_path]
+    outfname = '%s_results.json' % checkpoint_file
+    outf = os.path.join(settings.PROJECT_DIR, 'results', outfname)
+    cmd += ['--result_struct_filename=%s' % outf]
     subprocess.call(cmd)
     # Update the task records
+    job.data_output = outfname
     job.status = 'SUCCESS'
     job.save()
 
