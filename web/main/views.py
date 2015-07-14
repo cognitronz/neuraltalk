@@ -1,8 +1,9 @@
 from django.shortcuts import render_to_response
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect
+from django.template.context_processors import csrf
 from django.contrib.auth import logout
-from tasks import download, execute_training
+from tasks import download, execute_training, generate_results
 from django.conf import settings
 from celery.task.control import revoke
 from signal import SIGUSR1
@@ -35,6 +36,20 @@ def logout_user(request):
     return HttpResponseRedirect('/')
     
 
+def manage_datasets(request):
+    dls = Task.objects.filter(task_type='download_dataset', status='SUCCESS')
+    ds = []
+    if dls:
+        ds = [x.data_input for x in dls]
+    ds_list = ['flickr8k', 'flickr30k', 'coco']
+    nds = set(ds_list) - set(ds)
+    context = {
+            'datasets': ds,
+            'for_download': list(nds)[::-1]
+        }
+    return render_to_response('main/datasets.html', context)
+
+
 def download_datasets(request):
     ds = request.GET.get('dataset')
     task_id = str(uuid.uuid4())
@@ -42,7 +57,7 @@ def download_datasets(request):
     job.save()
     download.apply_async(args=(ds, job), task_id=task_id)
     context = {'task_id': task_id, 'dataset': ds}
-    return render_to_response('main/home.html', context)
+    return render_to_response('main/datasets.html', context)
     
     
 def download_status(request):
@@ -79,7 +94,27 @@ def serve_image(request, dataset, img_id):
     
    
 def results(request):
-    return render_to_response('main/visualize_result_struct.html')
+    context = {}
+    if request.method == 'POST':
+        checkpoint_file = request.POST.get('checkpoint')
+        task_id = str(uuid.uuid4())
+        generate_results.apply_async(args=(checkpoint_file,), task_id=task_id)
+        return HttpResponseRedirect('/results/?id=%s' % task_id)
+    elif request.method == 'GET':
+        task_id = request.GET.get('id')
+        if task_id:
+            context = {'task_id': task_id}
+        else:
+            checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
+            chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
+            context = {'files': [os.path.basename(x) for x in chkp_files]}
+    context.update(csrf(request))
+    return render_to_response('main/results.html', context)
+
+
+def predict(request):
+    context = {}
+    return render_to_response('main/predict.html', context)
 
 
 def workers_info(request):

@@ -1,10 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Neuraltalk Monitor</title>
+{% extends "main/base.html" %}
+
+{% block title %}
+    Neuraltalk :: Monitor
+{% endblock %}
+
+{% block extra-head %}
 <style>
-body {
+#wrap {
   font-family: courier;
   padding: 0;
   margin: 0;
@@ -164,17 +166,24 @@ function filterparams() {
 }
 
 </script>
-</head>
 
-<body onload="start()">
-  <!--
-  <div id="ui" style="margin:20px;">
-    <button type="button" onclick="allparams()">Show all params</button>
-    <button type="button" onclick="filterparams()">Filter params</button>
-  </div>
-  -->
-  <div id="wrap" style="margin: 20px;">
-  </div>
-</body>
+{% endblock %}
 
-</html>
+{% block content %}
+
+    <ul class="breadcrumb">
+        <li><a href="/">Home</a></li>
+        <li>Training</li>
+        <li class="active">Monitor</li>
+    </ul>
+
+  <div id="wrap" style="margin: 20px;"></div>
+  <script>
+    start();
+  </script>
+
+<script>
+    $("#menu-training").addClass("active");
+</script>
+
+{% endblock %}

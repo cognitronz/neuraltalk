@@ -1,8 +1,10 @@
 from django.conf import settings
+from collections import defaultdict
 from models import Task
 from celery import task
 import subprocess
 import requests
+import glob
 import uuid
 import os
 import time
@@ -69,6 +71,48 @@ def execute_training():
         job = Task(task_id=jid, task_type='train_dataset', data_input=ds)
         job.save()
         train_dataset.delay(ds, job)
+
+
+@task(name='tasks.generate_results')
+def generate_results(checkpoint_file):
+    jid = generate_results.request.id
+    job = Task(
+            task_id=jid, 
+            task_type='generate_results', 
+            data_input=checkpoint_file,
+            status='RUNNING'
+        )
+    job.save()
+    os.chdir(settings.PROJECT_DIR)
+    checkpoint_path = os.path.join(settings.PROJECT_DIR, 'cv', checkpoint_file)
+    cmd = ['python', os.path.join(settings.PROJECT_DIR, 'eval_sentence_predictions.py')]
+    cmd += [checkpoint_path]
+    subprocess.call(cmd)
+    # Update the task records
+    job.status = 'SUCCESS'
+    job.save()
+
+    
+@task(name='tasks.delete_old_checkpoints')
+def delete_old_checkpoints():
+    checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
+    chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
+    ds_list = ['flickr8k', 'flickr30k', 'coco']
+    for ds in ds_list:
+        fmap = defaultdict(list)
+        for cf in chkp_files:
+            fname = os.path.split(cf)[-1]
+            fname_split = fname.split('_')
+            fds = fname_split[2]
+            if ds == fds:
+                chk_num = fname_split[-1].split('.')[0]
+                fmap[int(chk_num)].append(cf)
+        fmap_keys = fmap.keys()
+        if len(fmap_keys) > 1:
+            fmap_keys.sort(reverse=True)
+            for k in fmap_keys[1:]:
+                for f in fmap[k]:
+                    os.remove(f)
     
     
 @task(name='tasks.test_func')

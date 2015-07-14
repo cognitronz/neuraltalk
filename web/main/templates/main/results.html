@@ -1,19 +1,16 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <title>Image Annotation Viewer</title>
-    <script src="/static/web/js/jquery-1.8.3.min.js"></script>
+{% extends "main/base.html" %}
+
+{% block title %}
+    Neuraltalk :: Datasets
+{% endblock %}
+
+{% block extra-head %}
+
     <script src="/static/web/js/d3.min.js" charset="utf-8"></script>
     <script src="/static/web/js/jsutils.js" charset="utf-8"></script>
-    <link rel="stylesheet" type="text/css" href="http://cs.stanford.edu/people/karpathy/cssutils.css">
-
-    <!-- Google fonts -->
-    <link href='http://fonts.googleapis.com/css?family=Roboto:400,300' rel='stylesheet' type='text/css'>
 
     <style>
-    body {
+    #wrap {
       color: #333;
       font-family: 'Roboto', sans-serif;
       font-weight: 300;
@@ -159,16 +156,63 @@
     }
     </script>
     
-  </head>
-  <body onload="start()">
-    <div id="header">
-        <h1><a href="https://github.com/karpathy/neuraltalk">NeuralTalk</a> Sentence Generation Results</h1>
-        <div id="blobsheader"></div>
-      </div>
-    <div id="wrap">
-      <div id="wrap">
-        <div id="blobs"></div>  
-      </div>
-    </div>
-  </body>
-</html>
+{% endblock %}
+
+{% block content %}
+
+    <ul class="breadcrumb">
+        <li><a href="/">Home</a></li>
+        <li>Training</li>
+        <li class="active">Results</li>
+    </ul>
+    
+    <h1>Training Results</h1>
+    
+    {% if task_id %}    
+
+        <h3 id="status">Wait while results are being generated...</h3>
+
+        <div id="wrap">
+          <div id="wrap">
+            <div id="blobs"></div>  
+          </div>
+        </div>
+
+        <script>
+            (function poll() {
+                setInterval(function(){
+                    $.get("/results_status/?id={{ task_id }}", function(d){
+                        if (d == "SUCCESS") {
+                            clearInterval();
+                            $("#status").hide();
+                            start();
+                        }
+                    })
+                }, 3000);
+            })();
+        </script>
+    
+    {% else %}
+    
+        <div id="form" style="margin-top: 20px; width: 50%;" class="well">
+            <h4>Select Checkpoint File to Visualize</h4>
+            <form action="." method="post">{% csrf_token %}
+              <div class="form-group">
+                <label for="chk">Checkpoint file:</label>
+                <select name="checkpoint">
+                    {% for file in files %}
+                        <option>{{ file }}</option>
+                    {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">Visualize</button>
+            </form>
+        </div>
+        
+    {% endif %}
+
+<script>
+    $("#menu-training").addClass("active");
+</script>
+
+{% endblock %}
