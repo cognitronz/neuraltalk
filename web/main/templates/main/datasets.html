@@ -9,10 +9,10 @@
 <ul class="breadcrumb">
     <li><a href="/">Home</a></li>
     <li>Training</li>
-    <li class="active">Datasets</li>
+    <li class="active">Manage Datasets</li>
 </ul>
 
-<h1>Datasets</h1>
+<h1>Manage Datasets</h1>
 
 {% if task_id %}
     
@@ -47,25 +47,23 @@
                     <li>{{ ds }}</li>
                 {% endfor %}
                 </ul>
+            {% endif %}
+            {% if for_download %}
                 <br>
                 Download more:
                 <br>
+                <form action="/download/">
+                    <select name="dataset" id="download">
+                        {% for ds in for_download %}
+                        <option value="{{ ds }}">{{ ds }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Download</button>
+                </form>
             {% endif %}
-            <form action="/download/">
-                <select name="dataset" id="download">
-                    {% for ds in for_download %}
-                    <option value="{{ ds }}">{{ ds }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit">Download</button>
-            </form>
         </li>
         <div>
     </ul>
-    <div style="margin-top: 30px;">
-        <p>If datasets are ready, click the button below to start training</p>
-        <a href="/train/" class="btn btn-primary">Execute Training</a>
-    </div>
 
 {% endif %}
 

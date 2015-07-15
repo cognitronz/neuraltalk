@@ -85,8 +85,6 @@ function updateWorker(i, status_struct) {
   var data = all_data[all_data.length - 1]; // get last report
   var div = d3.select('#w'+i);
   $("#w"+i).empty();
-  
-  console.log(data);
 
   var dupdated = new Date(data['time']); // not sure what's up
   var dnow = new Date();
@@ -174,7 +172,7 @@ function filterparams() {
     <ul class="breadcrumb">
         <li><a href="/">Home</a></li>
         <li>Training</li>
-        <li class="active">Monitor</li>
+        <li class="active">Monitor Progress</li>
     </ul>
 
   <div id="wrap" style="margin: 20px;"></div>

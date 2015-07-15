@@ -4,8 +4,10 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template.context_processors import csrf
 from django.contrib.auth import logout
 from tasks import download, execute_training, generate_results
+from django.core.paginator import Paginator
 from django.conf import settings
 from celery.task.control import revoke
+from PIL import Image
 from signal import SIGUSR1
 from tasks import download
 from models import Task
@@ -74,26 +76,42 @@ def download_status(request):
 
 
 def train(request):
-    execute_training.delay()
-    return HttpResponseRedirect('/monitor/')
+    context = {}
+    if request.method == 'POST':
+        chk = request.POST.get('checkpoints')
+        use_chk = False
+        if chk == 'on':
+            use_chk = True
+        
+    elif request.method == 'GET':
+        pass
+    context.update(csrf(request))
+    return render_to_response('main/training.html', context)
     
 
 def monitor(request):
     return render_to_response('main/monitorcv.html')
    
 
+"""
 def get_results(request):
     task_id = request.GET.get('task_id')
     task = Task.objects.get(task_id=task_id, status='SUCCESS')
     results_dir = os.path.join(settings.PROJECT_DIR, 'results')
     results_file = os.path.join(results_dir, task.data_output)
     return HttpResponse(open(results_file, 'r'), content_type = 'application/json; charset=utf8')
-    
+"""
+ 
 
 def serve_image(request, dataset, img_id):
     imgs_dir = os.path.join(settings.PROJECT_DIR, 'data', dataset, 'imgs')
     img_file = os.path.join(imgs_dir, img_id + '.jpg')
-    return HttpResponse(open(img_file,'rb'), content_type='image/jpeg')    
+    im = Image.open(img_file)
+    im.thumbnail((400,300), Image.ANTIALIAS)
+    response = HttpResponse(content_type="image/jpeg")
+    im.save(response, "JPEG")
+    return response
+    #return HttpResponse(open(img_file,'rb'), content_type='image/jpeg')    
     
    
 def results(request):
@@ -110,8 +128,23 @@ def results(request):
     elif request.method == 'GET':
         task_id = request.GET.get('id')
         action = request.GET.get('action')
+        page_number = request.GET.get('page')
         if task_id:
-            context = {'task_id': task_id, 'action': action}
+            task = Task.objects.get(task_id=task_id, status='SUCCESS')
+            results_dir = os.path.join(settings.PROJECT_DIR, 'results')
+            results_file = os.path.join(results_dir, task.data_output)
+            results = json.load(open(results_file, 'r'))
+            images = results['imgblobs']
+            p = Paginator(images, 100)
+            if not page_number:
+                page_number = 1
+            page = p.page(page_number)
+            context = {
+                    'task_id': task_id, 
+                    'action': action, 
+                    'images': page,
+                    'checkpoint_file': task.data_output
+                }
         else:
             checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
             chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))

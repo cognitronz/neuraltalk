@@ -43,13 +43,15 @@ def download(ds, job):
     
 
 @task(name='tasks.train_dataset')
-def train_dataset(ds, job):
+def train_dataset(ds, job, checkpoint=None):
     job.status = 'RUNNING'
     job.save()
     os.chdir(settings.PROJECT_DIR)
     cmd = ['python', os.path.join(settings.PROJECT_DIR, 'driver.py')]
     cmd += ['--dataset=%s' % ds, '--worker_id=%s' % job.task_id]
     cmd += ['--learning_rate=%s' % settings.LEARNING_RATE[ds]]
+    if checkpoint:
+        cmd += ['--init_model_from=%s' % os.path.join(settings.PROJECT_DIR, 'cv', checkpoint)]
     task_id = train_dataset.request.id
     subprocess.call(cmd)
     # Update the task records
@@ -57,8 +59,26 @@ def train_dataset(ds, job):
     job.save()
 
 
+def get_last_checkpoints():
+    chk_files = {}
+    checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
+    chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
+    ds_list = ['flickr8k', 'flickr30k', 'coco']
+    for ds in ds_list:
+        cfs = []
+        for cf in chkp_files:
+            fname = os.path.split(cf)[-1]
+            fname_split = fname.split('_')
+            fds = fname_split[2]
+            if ds == fds:
+                chk_num = fname_split[-1].split('.')[0]
+                cfs.append(cf)
+        chk_files[ds] = cfs[-1]
+    return chk_files
+
+
 @task(name='tasks.execute_training')
-def execute_training():
+def execute_training(use_checkpoints=False):
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     ts = Task.objects.filter(task_type='train_dataset', status='SUCCESS')
     tss = []
@@ -66,12 +86,16 @@ def execute_training():
         tss = [x.data_input for x in ts]
     datasets = set(ds_list) - set(tss)
     datasets = list(datasets)
+    chk_files = get_last_checkpoints()
     for ds in datasets:
         jid = str(uuid.uuid1())
         job = Task(task_id=jid, task_type='train_dataset', data_input=ds)
         job.save()
-        train_dataset.delay(ds, job)
-
+        if use_checkpoints:
+            train_dataset.apply_async(args=(ds, job), checkpoint=chk_files[ds])
+        else:
+            train_dataset.apply_async(args=(ds, job))
+            
 
 @task(name='tasks.generate_results')
 def generate_results(checkpoint_file):
@@ -113,9 +137,9 @@ def delete_old_checkpoints():
                 chk_num = fname_split[-1].split('.')[0]
                 fmap[int(chk_num)].append(cf)
         fmap_keys = fmap.keys()
-        if len(fmap_keys) > 1:
+        if len(fmap_keys) > 2:
             fmap_keys.sort(reverse=True)
-            for k in fmap_keys[1:]:
+            for k in fmap_keys[2:]:
                 for f in fmap[k]:
                     os.remove(f)
     

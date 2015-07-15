@@ -1,13 +1,11 @@
 {% extends "main/base.html" %}
 
 {% block title %}
-    Neuraltalk :: Datasets
+    Neuraltalk :: Results
 {% endblock %}
 
-{% block extra-head %}
 
-    <script src="/static/web/js/d3.min.js" charset="utf-8"></script>
-    <script src="/static/web/js/jsutils.js" charset="utf-8"></script>
+{% block extra-head %}
 
     <style>
     #wrap {
@@ -39,124 +37,24 @@
       vertical-align: top;
       margin: 10px;
     }
-    h1 {
+    #wrap h1 {
       font-weight: 300;
       margin: 0;
     }
-    h2 {
+    #wrap h2 {
       font-weight: 300;
       font-size: 20px;
     }
     #wrap {
       margin: 20px;
     }
-    #header {
-      background-color: #f7f6f1;
-      padding: 20px;
-      border-bottom: 1px solid #555;
-      box-shadow: 0px 0px 4px 2px #555;
-    }
     .logprob {
       font-family: Courier, monospace;
     }
     </style>
-    
-    <script type="application/javascript">
 
-    // globals
-    var db = [];
-    var imgperm = [];
-    var current_img_i = 0;
-
-    function start() {
-      loadDataset('/get_results/?task_id={{ task_id }}');
-    }
-
-    function writeHeader() {
-      html = '<h2>Showing results for ' + db.checkpoint_params.dataset + ' on ' + db.imgblobs.length + ' images</h2>';
-      html += '<br>Eval params were: ' + JSON.stringify(db.params);
-      html += '<br>Final average perplexity of ground truth words: ' + db.gtppl.toFixed(2);
-      $("#blobsheader").html(html);
-    }
-
-    function renderNextImage() {
-      var ib = db.imgblobs[imgperm[current_img_i]]; // next image blob
-      var newdiv = d3.select("#blobs").append("div");
-      newdiv.attr("id", 'img'+current_img_i);
-      newdiv.attr("class", "idiv")
-      current_img_i++;
-      visImg(ib, newdiv); // function fills the pdiv with content
-    }
-
-    function visSentencesInit() {
-      $("#blobs").empty();
-      current_img_i = 0;
-      for(var i=0;i<20;i++) { renderNextImage(); }
-    }
-
-    // pix is index of the sentece
-    function visImg(ib, div) {
-      
-      // fetch the associated top image
-      var fname = ib.img_path;
-      var img = new Image();
-      img.src = fname;
-      img.onload = function() {
-
-        var width = this.width;
-        var height = this.height;
-        var desired_height = 300;
-        var hscale = desired_height / height;
-        var nwidth = width * hscale; 
-
-        // okay now lets render the image
-        var sdiv = div.append("div").attr('class', 'svgdiv');
-        sdiv.append('img').attr('src', '/results/' + fname).attr('height', desired_height).attr('width', nwidth);
-
-        // add human predictions
-        if('references' in ib && false) {
-          var dnew = div.append('div').attr('class','hannot annot').style('width', Math.floor(nwidth-6) + 'px');
-          insertAnnot(ib.references[0], dnew);
-        }
-        
-        // add predictions
-        if('candidate' in ib) {
-          var dnew = div.append('div').attr('class','rnnannot annot').style('width', Math.floor(nwidth-6) + 'px');
-          insertAnnot(ib.candidate, dnew);
-        }
-      }
-    }
-
-    function insertAnnot(annot, dnew) {
-      dnew.append('div').attr('class', 'atxt').text(annot.text);
-      dnew.append('div').attr('class', 'logprob').text('logprob: ' + annot.logprob.toFixed(2));
-    }
-
-    // Handle infinite Scroll
-    $(window).scroll(function() {
-      if($(window).scrollTop() > 0.9 * ($(document).height() - $(window).height())) {
-        if(current_img_i < imgperm.length) {
-          // try to stay 20 images ahead of the scroll
-          for(var q=0;q<20;q++) { renderNextImage(); }
-        }
-      }
-    });
-    
-    // Data Loading
-    function loadDataset(jsonpath) {
-      // ugly hack to prevent caching below ;(
-      var jsonmod = jsonpath + '?sigh=' + Math.floor(Math.random() * 100000);
-      $.getJSON(jsonpath, function(data) {
-        db = data; // assign to global
-        imgperm = randperm(db.imgblobs.length);
-        //imgperm = []; for(var i=0;i<db.imgblobs.length;i++) { imgperm.push(i); }
-        writeHeader();
-        visSentencesInit();
-      });
-    }
-    </script>
-    
 {% endblock %}
+
 
 {% block content %}
 
@@ -168,7 +66,7 @@
     
     <h1>Training Results</h1>
     
-    {% if task_id %}  
+    {% if task_id %}
     
         {% if action == 'wait' %}  
 
@@ -189,22 +87,73 @@
             
         {% else %}
         
+            <h3>Checkpoint file selected:</h3>
+            <p>{{ checkpoint_file }}</p>
+        
+            <div class="text-center">
+                <ul class="pagination">
+                    {% for n in images.paginator.page_range %}
+                        {% if n == images.number %}
+                            <li class="active">
+                                <a href="/results/?action=view&id={{ task_id }}&page={{ n }}">
+                                {{ n }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a href="/results/?action=view&id={{ task_id }}&page={{ n }}">
+                                {{ n }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        
             <div id="wrap">
               <div id="wrap">
-                <div id="blobs"></div>  
+                <div id="blobs">
+                    {% for img in images.object_list %}
+                        <div id="img{{ forloop.counter0 }}" class="idiv">
+                            <div class="svgdiv">
+                                <img src="/results/{{ img.img_path }}">
+                            </div>
+                            <div class="rnnannot annot">
+                                <div class="atxt">{{ img.candidate.text }}</div>
+                                <div class="logprob">{{ img.candidate.logprob }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>  
               </div>
             </div>
             
-            <script>
-                start()
-            </script>
+            <div class="text-center">
+                <ul class="pagination">
+                    {% for n in images.paginator.page_range %}
+                        {% if n == images.number %}
+                            <li class="active">
+                                <a href="/results/?action=view&id={{ task_id }}&page={{ n }}">
+                                {{ n }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li>
+                                <a href="/results/?action=view&id={{ task_id }}&page={{ n }}">
+                                {{ n }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
         
         {% endif %}
     
     {% else %}
     
         <div id="form" style="margin-top: 20px; width: 50%;" class="well">
-            <h4>Select Checkpoint File to Visualize</h4>
+            <h2>Select Checkpoint File to Visualize</h2>
             <form action="." method="post">{% csrf_token %}
               <div class="form-group">
                 <label for="chk">Checkpoint file:</label>
