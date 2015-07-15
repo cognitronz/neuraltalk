@@ -82,7 +82,8 @@ def train(request):
         use_chk = False
         if chk == 'on':
             use_chk = True
-        
+        execute_training.delay(use_chk)
+        return HttpResponseRedirect('/monitor/')
     elif request.method == 'GET':
         pass
     context.update(csrf(request))

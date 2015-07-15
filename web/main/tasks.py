@@ -43,7 +43,7 @@ def download(ds, job):
     
 
 @task(name='tasks.train_dataset')
-def train_dataset(ds, job, checkpoint=None):
+def train_dataset(ds, job, checkpoint):
     job.status = 'RUNNING'
     job.save()
     os.chdir(settings.PROJECT_DIR)
@@ -78,7 +78,7 @@ def get_last_checkpoints():
 
 
 @task(name='tasks.execute_training')
-def execute_training(use_checkpoints=False):
+def execute_training(use_checkpoints):
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     ts = Task.objects.filter(task_type='train_dataset', status='SUCCESS')
     tss = []
@@ -92,9 +92,9 @@ def execute_training(use_checkpoints=False):
         job = Task(task_id=jid, task_type='train_dataset', data_input=ds)
         job.save()
         if use_checkpoints:
-            train_dataset.apply_async(args=(ds, job), checkpoint=chk_files[ds])
+            train_dataset.apply_async(args=(ds, job, chk_files[ds]))
         else:
-            train_dataset.apply_async(args=(ds, job))
+            train_dataset.apply_async(args=(ds, job, None))
             
 
 @task(name='tasks.generate_results')
