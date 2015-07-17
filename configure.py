@@ -80,7 +80,7 @@ serverurl = http://localhost:8080
 
 [program:webserver]
 directory = web
-command = {0}/venv/bin/python manage.py runserver
+command = {0}/venv/bin/python manage.py serve
 stopasgroup = true
 
 [program:celery]
