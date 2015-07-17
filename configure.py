@@ -56,4 +56,48 @@ with open('/etc/init.d/supervisord', 'w') as outf:
         p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
         p.communicate()
         
-print 'Startup script added!'    
+print 'Startup script added!'  
+
+# Setup the supervisord.conf
+
+supervisord_conf = """
+[inet_http_server]
+port = 127.0.0.1:8080
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisord]
+logfile = {0}/supervisord.log
+logfile_maxbytes = 10MB
+loglevel = debug
+pidfile = {0}/supervisord.pid
+directory = {0}  ; (change this during deployment)
+environment = C_FORCE_ROOT="yes"
+
+[supervisorctl]
+serverurl = http://localhost:8080
+
+[program:webserver]
+directory = web
+command = {0}/venv/bin/python manage.py runserver
+stopasgroup = true
+
+[program:celery]
+directory = web
+command = {0}/venv/bin/celery -A web worker -l info
+stopasgroup = true
+
+[program:redis]
+command = /usr/bin/redis-server
+stopasgroup = true
+""".format(os.getcwd())
+
+# Remove if config exists
+if os.path.exists('supervisord.conf'):
+    os.remove('supervisord.conf')
+
+# Write the config file
+print 'Writing supervisord.conf file...'
+with open('supervisord.conf', 'w') as outf:
+    outf.write(supervisord_conf)

@@ -158,8 +158,8 @@
               <div class="form-group">
                 <label for="chk">Checkpoint file:</label>
                 <select name="checkpoint">
-                    {% for file in files %}
-                        <option>{{ file }}</option>
+                    {% for file, date in files %}
+                        <option value="{{ file }}">{{ file }} :: {{ date }}</option>
                     {% endfor %}
                 </select>
               </div>

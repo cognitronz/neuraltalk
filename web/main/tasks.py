@@ -97,19 +97,8 @@ def execute_training(use_checkpoints):
             train_dataset.apply_async(args=(ds, job, None))
             
 
-@task(name='tasks.generate_results')
-def generate_results(checkpoint_file):
-    jid = generate_results.request.id
-    outfname = '%s_results.json' % checkpoint_file
-    outf = os.path.join(settings.PROJECT_DIR, 'results', outfname)
-    job = Task(
-            task_id=jid, 
-            task_type='generate_results', 
-            data_input=checkpoint_file,
-            data_output=outf,
-            status='RUNNING'
-        )
-    job.save()
+@task(name='tasks.generate_results', queue='results')
+def generate_results(job, outf, checkpoint_file):
     os.chdir(settings.PROJECT_DIR)
     checkpoint_path = os.path.join(settings.PROJECT_DIR, 'cv', checkpoint_file)
     cmd = ['python', os.path.join(settings.PROJECT_DIR, 'eval_sentence_predictions.py')]
@@ -117,7 +106,6 @@ def generate_results(checkpoint_file):
     cmd += ['--result_struct_filename=%s' % outf]
     subprocess.call(cmd)
     # Update the task records
-    job.data_output = outfname
     job.status = 'SUCCESS'
     job.save()
 

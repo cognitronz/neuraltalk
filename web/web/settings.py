@@ -26,7 +26,7 @@ SECRET_KEY = 'rake_x7j^dxkn!4t1h4!th&@5wed_@udt(k##&xr5z4a!z-w8+'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition

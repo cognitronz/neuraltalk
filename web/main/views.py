@@ -7,6 +7,8 @@ from tasks import download, execute_training, generate_results
 from django.core.paginator import Paginator
 from django.conf import settings
 from celery.task.control import revoke
+from operator import itemgetter
+from datetime import datetime
 from PIL import Image
 from signal import SIGUSR1
 from tasks import download
@@ -124,32 +126,43 @@ def results(request):
             return HttpResponseRedirect('/results/?action=view&id=%s' % task[0].task_id)
         else:
             task_id = str(uuid.uuid4())
-            generate_results.apply_async(args=(checkpoint_file,), task_id=task_id)
+            outfname = '%s_results.json' % checkpoint_file
+            outf = os.path.join(settings.PROJECT_DIR, 'results', outfname)
+            job = Task(
+                    task_id=task_id, 
+                    task_type='generate_results', 
+                    data_input=checkpoint_file,
+                    data_output=outfname,
+                    status='RUNNING'
+                )
+            job.save()
+            generate_results.apply_async(args=(job, outf, checkpoint_file), task_id=task_id)
             return HttpResponseRedirect('/results/?action=wait&id=%s' % task_id)
     elif request.method == 'GET':
         task_id = request.GET.get('id')
         action = request.GET.get('action')
         page_number = request.GET.get('page')
         if task_id:
-            task = Task.objects.get(task_id=task_id, status='SUCCESS')
-            results_dir = os.path.join(settings.PROJECT_DIR, 'results')
-            results_file = os.path.join(results_dir, task.data_output)
-            results = json.load(open(results_file, 'r'))
-            images = results['imgblobs']
-            p = Paginator(images, 100)
-            if not page_number:
-                page_number = 1
-            page = p.page(page_number)
-            context = {
-                    'task_id': task_id, 
-                    'action': action, 
-                    'images': page,
-                    'checkpoint_file': task.data_output
-                }
+            context = {'task_id': task_id, 'action': action}
+            if action == 'view':
+                task = Task.objects.get(task_id=task_id, status='SUCCESS')
+                results_dir = os.path.join(settings.PROJECT_DIR, 'results')
+                results_file = os.path.join(results_dir, task.data_output)
+                results = json.load(open(results_file, 'r'))
+                images = results['imgblobs']
+                p = Paginator(images, 100)
+                if not page_number:
+                    page_number = 1
+                page = p.page(page_number)
+                context['images'] = page
+                context['checkpoint_file'] = task.data_output
         else:
             checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
             chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
-            context = {'files': [os.path.basename(x) for x in chkp_files]}
+            details = [[x, os.stat(x).st_mtime] for x in chkp_files]
+            details.sort(key=itemgetter(1), reverse=True)
+            details = [(x, datetime.fromtimestamp(y).strftime('%B-%d-%Y %H:%M')) for x,y in details]
+            context = {'files': details}
     context.update(csrf(request))
     return render_to_response('main/results.html', context)
 
