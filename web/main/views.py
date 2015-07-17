@@ -159,7 +159,7 @@ def results(request):
         else:
             checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
             chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
-            details = [[x, os.stat(x).st_mtime] for x in chkp_files]
+            details = [[os.path.basename(x), os.stat(x).st_mtime] for x in chkp_files]
             details.sort(key=itemgetter(1), reverse=True)
             details = [(x, datetime.fromtimestamp(y).strftime('%B-%d-%Y %H:%M')) for x,y in details]
             context = {'files': details}

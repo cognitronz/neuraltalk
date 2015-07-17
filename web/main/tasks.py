@@ -1,5 +1,6 @@
 from django.conf import settings
 from collections import defaultdict
+from operator import itemgetter
 from models import Task
 from celery import task
 import subprocess
@@ -63,17 +64,19 @@ def get_last_checkpoints():
     chk_files = {}
     checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
     chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
+    chkp_files = [[x, os.stat(x).st_mtime] for x in chkp_files]
+    chkp_files.sort(key=itemgetter(1), reverse=True)
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     for ds in ds_list:
         cfs = []
-        for cf in chkp_files:
+        for cf,dt in chkp_files:
             fname = os.path.split(cf)[-1]
             fname_split = fname.split('_')
             fds = fname_split[2]
             if ds == fds:
                 chk_num = fname_split[-1].split('.')[0]
                 cfs.append(cf)
-        chk_files[ds] = cfs[-1]
+        chk_files[ds] = cfs[0]
     return chk_files
 
 
@@ -114,18 +117,19 @@ def generate_results(job, outf, checkpoint_file):
 def delete_old_checkpoints():
     checkpoints_dir = os.path.join(settings.PROJECT_DIR, 'cv')
     chkp_files = glob.glob(os.path.join(checkpoints_dir, '*.p'))
+    chkp_files = [[x, os.stat(x).st_mtime] for x in chkp_files]
+    chkp_files.sort(key=itemgetter(1), reverse=True)
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     for ds in ds_list:
         fmap = defaultdict(list)
-        for cf in chkp_files:
+        for cf, dt in chkp_files:
             fname = os.path.split(cf)[-1]
             fname_split = fname.split('_')
             fds = fname_split[2]
             if ds == fds:
-                chk_num = fname_split[-1].split('.')[0]
-                fmap[int(chk_num)].append(cf)
+                fmap[dt].append(cf)
         fmap_keys = fmap.keys()
-        if len(fmap_keys) > 2:
+        if len(fmap_keys) > 4:
             fmap_keys.sort(reverse=True)
             for k in fmap_keys[2:]:
                 for f in fmap[k]:
