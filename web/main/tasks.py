@@ -16,7 +16,7 @@ DATA_DIR = os.path.join(settings.PROJECT_DIR, 'data')
 # Define background tasks
 #
 
-@task(name='tasks.download')
+@task(name='tasks.download', queue='training')
 def download(ds, job):
     # Build dataset URL
     base_url = 'http://cs.stanford.edu/people/karpathy/deepimagesent/'
@@ -43,7 +43,7 @@ def download(ds, job):
     os.remove(outfile_path)
     
 
-@task(name='tasks.train_dataset')
+@task(name='tasks.train_dataset', queue='training')
 def train_dataset(ds, job, checkpoint):
     job.status = 'RUNNING'
     job.save()
@@ -80,7 +80,7 @@ def get_last_checkpoints():
     return chk_files
 
 
-@task(name='tasks.execute_training')
+@task(name='tasks.execute_training', queue='training')
 def execute_training(use_checkpoints):
     ds_list = ['flickr8k', 'flickr30k', 'coco']
     ts = Task.objects.filter(task_type='train_dataset', status='SUCCESS')

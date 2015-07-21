@@ -10,3 +10,4 @@ cv/
 web/static/*
 *.pid
 result_struct.json
+web/db.sqlite3

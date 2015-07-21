@@ -83,9 +83,14 @@ directory = web
 command = {0}/venv/bin/python manage.py serve
 stopasgroup = true
 
-[program:celery]
+[program:celery_training]
 directory = web
-command = {0}/venv/bin/celery -A web worker -l info
+command = {0}/venv/bin/celery -A web worker -l info -Q training
+stopasgroup = true
+
+[program:celery_results]
+directory = web
+command = {0}/venv/bin/celery -A web worker -l info -c 1 -Q results
 stopasgroup = true
 
 [program:redis]
